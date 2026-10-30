@@ -29,3 +29,27 @@ export function initMiniApp() {
     user: app?.initDataUnsafe?.user ?? null,
   };
 }
+
+export function getInitData() {
+  return getWebApp()?.initData || "";
+}
+
+export function getStartParam() {
+  return getWebApp()?.initDataUnsafe?.start_param || "";
+}
+
+export function inviteFromContacts({ botUsername, webappUrl, code }) {
+  const app = getWebApp();
+  const invite = botUsername
+    ? `https://t.me/${botUsername}?start=join_${code}`
+    : `${String(webappUrl || "").replace(/\/$/, "")}/?room=${code}`;
+  const share =
+    `https://t.me/share/url?url=${encodeURIComponent(invite)}` +
+    `&text=${encodeURIComponent("Присоединяйся к комнате D&D!")}`;
+
+  if (app?.openTelegramLink) {
+    app.openTelegramLink(share);
+    return;
+  }
+  window.open(share, "_blank");
+}
