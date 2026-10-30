@@ -146,6 +146,9 @@ export async function handler(event) {
       if (room.status !== "adventure") {
         return json(400, { detail: "Инициатива доступна после старта приключения" });
       }
+      if (room.turns?.active) {
+        return json(400, { detail: "Ходы уже начались" });
+      }
 
       const player = room.players.find((p) => Number(p.id) === Number(me.id));
       if (!player || player.role !== "player" || !player.hero) {
@@ -184,6 +187,39 @@ export async function handler(event) {
       room.initiative = {
         status: rolled.length === party.length ? "ready" : "rolling",
       };
+      await store.set(code, room);
+      return json(200, { room });
+    }
+
+    if (
+      event.httpMethod === "POST" &&
+      parts[0] === "rooms" &&
+      parts[1] &&
+      parts[2] === "turns" &&
+      parts[3] === "start"
+    ) {
+      const code = parts[1].toUpperCase();
+      const room = await store.get(code);
+      if (!room) return json(404, { detail: "Комната не найдена" });
+      if (Number(room.master.id) !== Number(me.id)) {
+        return json(403, { detail: "Только мастер может нажать Старт" });
+      }
+      if (room.status !== "adventure") {
+        return json(400, { detail: "Приключение ещё не начато" });
+      }
+      if (room.initiative?.status !== "ready") {
+        return json(400, { detail: "Дождитесь бросков инициативы всех игроков" });
+      }
+      if (!Array.isArray(room.turn_order) || !room.turn_order.length) {
+        return json(400, { detail: "Очередь хода пуста" });
+      }
+
+      room.turns = {
+        active: true,
+        index: 0,
+        started_at: new Date().toISOString(),
+      };
+      room.initiative = { ...(room.initiative || {}), status: "started" };
       await store.set(code, room);
       return json(200, { room });
     }

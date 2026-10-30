@@ -52,4 +52,9 @@ export const api = {
       method: "POST",
       body: "{}",
     }),
+  startTurns: (code) =>
+    request(`/rooms/${encodeURIComponent(code)}/turns/start`, {
+      method: "POST",
+      body: "{}",
+    }),
 };

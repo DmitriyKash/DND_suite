@@ -139,6 +139,12 @@ export default function App() {
               setRoom(data.room);
             })
           }
+          onStartTurns={() =>
+            run(async () => {
+              const data = await api.startTurns(room.code);
+              setRoom(data.room);
+            })
+          }
         />
       ) : null}
 

@@ -61,6 +61,7 @@ export default function GameSession({
   onRefresh,
   onBegin,
   onRollInitiative,
+  onStartTurns,
 }) {
   const isMaster = Number(room.master.id) === Number(user?.id);
   const heroes = room.players.filter((p) => p.role === "player" && p.hero);
@@ -70,6 +71,10 @@ export default function GameSession({
   const me = room.players.find((p) => Number(p.id) === Number(user?.id));
   const { queued, waiting } = buildTurnQueue(room);
   const initiativeReady = room.initiative?.status === "ready";
+  const turnsActive = Boolean(room.turns?.active);
+  const currentId = turnsActive
+    ? room.turn_order?.[room.turns?.index || 0]
+    : queued[0]?.id;
 
   if (inAdventure) {
     return (
@@ -79,12 +84,16 @@ export default function GameSession({
           <h1>{room.title}</h1>
           <p className="lead">
             {isMaster
-              ? initiativeReady
-                ? "Инициатива собрана. Порядок хода зафиксирован."
-                : "Игроки бросают кубик на очередь хода."
-              : me?.initiative
-                ? "Ваш бросок принят. Ждите остальных."
-                : "Бросьте d20 на инициативу (с модификатором Ловкости)."}
+              ? turnsActive
+                ? "Ходы начались. Следите за очередью."
+                : initiativeReady
+                  ? "Все бросили инициативу. Можно запускать ходы."
+                  : "Игроки бросают кубик на очередь хода."
+              : turnsActive
+                ? "Ходы начались. Смотрите очередь."
+                : me?.initiative
+                  ? "Ваш бросок принят. Ждите старта от мастера."
+                  : "Бросьте d20 на инициативу (с модификатором Ловкости)."}
           </p>
         </header>
 
@@ -102,7 +111,7 @@ export default function GameSession({
           </section>
         ) : null}
 
-        {!isMaster && me?.initiative ? (
+        {!isMaster && me?.initiative && !turnsActive ? (
           <section className="card">
             <h2>Ваш результат</h2>
             <p>
@@ -116,7 +125,17 @@ export default function GameSession({
           </section>
         ) : null}
 
-        <TurnOrder queued={queued} waiting={waiting} highlightId={queued[0]?.id} />
+        <TurnOrder queued={queued} waiting={waiting} highlightId={currentId} />
+
+        {isMaster && initiativeReady && !turnsActive ? (
+          <section className="card">
+            <h2>Готово к старту</h2>
+            <p className="muted">Все игроки бросили кубик. Запустите ходы по очереди.</p>
+            <button disabled={busy} onClick={onStartTurns}>
+              {busy ? "Запуск..." : "Старт"}
+            </button>
+          </section>
+        ) : null}
 
         <section className="card">
           <div className="row-between">
