@@ -95,10 +95,10 @@ export default function App() {
     }
   }
 
-  const inGame = room?.status === "playing";
+  const inGame = room?.status === "playing" || room?.status === "adventure";
   const me = room?.players?.find((p) => Number(p.id) === Number(app.user?.id));
   const isMaster = Number(room?.master?.id) === Number(app.user?.id);
-  const needsHero = inGame && !isMaster && me && !me.hero;
+  const needsHero = room?.status === "playing" && !isMaster && me && !me.hero;
 
   return (
     <main className="page">
@@ -124,6 +124,12 @@ export default function App() {
           onRefresh={() =>
             run(async () => {
               const data = await api.getRoom(room.code);
+              setRoom(data.room);
+            })
+          }
+          onBegin={() =>
+            run(async () => {
+              const data = await api.beginAdventure(room.code);
               setRoom(data.room);
             })
           }

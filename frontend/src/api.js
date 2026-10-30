@@ -42,4 +42,9 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ hero }),
     }),
+  beginAdventure: (code) =>
+    request(`/rooms/${encodeURIComponent(code)}/begin`, {
+      method: "POST",
+      body: "{}",
+    }),
 };
