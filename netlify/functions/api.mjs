@@ -52,15 +52,17 @@ export async function handler(event) {
       const room = {
         code,
         title,
+        status: "lobby",
         master: me,
         players: [{ ...me, role: "master" }],
         created_at: new Date().toISOString(),
+        started_at: null,
       };
       await store.set(code, room);
       return json(201, { room });
     }
 
-    if (event.httpMethod === "GET" && parts[0] === "rooms" && parts[1]) {
+    if (event.httpMethod === "GET" && parts[0] === "rooms" && parts[1] && !parts[2]) {
       const room = await store.get(parts[1].toUpperCase());
       if (!room) return json(404, { detail: "Комната не найдена" });
       return json(200, { room });
@@ -70,13 +72,35 @@ export async function handler(event) {
       const code = parts[1].toUpperCase();
       const room = await store.get(code);
       if (!room) return json(404, { detail: "Комната не найдена" });
+      if (room.status === "playing") {
+        const member = room.players.some((p) => Number(p.id) === Number(me.id));
+        if (!member) {
+          return json(400, { detail: "Игра уже началась" });
+        }
+        return json(200, { room });
+      }
 
-      const already = room.players.some((p) => p.id === me.id);
+      const already = room.players.some((p) => Number(p.id) === Number(me.id));
       if (!already) {
         if (room.players.length >= 8) {
           return json(400, { detail: "Комната заполнена (макс. 8)" });
         }
         room.players.push({ ...me, role: "player" });
+        await store.set(code, room);
+      }
+      return json(200, { room });
+    }
+
+    if (event.httpMethod === "POST" && parts[0] === "rooms" && parts[1] && parts[2] === "start") {
+      const code = parts[1].toUpperCase();
+      const room = await store.get(code);
+      if (!room) return json(404, { detail: "Комната не найдена" });
+      if (Number(room.master.id) !== Number(me.id)) {
+        return json(403, { detail: "Только мастер может начать игру" });
+      }
+      if (room.status !== "playing") {
+        room.status = "playing";
+        room.started_at = new Date().toISOString();
         await store.set(code, room);
       }
       return json(200, { room });

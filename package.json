@@ -1,8 +1,12 @@
 {
   "name": "dnd-telegram",
   "private": true,
+  "type": "module",
   "scripts": {
     "api": "node scripts/dev-api.mjs",
     "dev:web": "npm --prefix frontend run dev"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
   }
 }

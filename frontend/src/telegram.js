@@ -40,16 +40,22 @@ export function getStartParam() {
 
 export function inviteFromContacts({ botUsername, webappUrl, code }) {
   const app = getWebApp();
+  const base = String(webappUrl || window.location.origin).replace(/\/$/, "");
   const invite = botUsername
     ? `https://t.me/${botUsername}?start=join_${code}`
-    : `${String(webappUrl || "").replace(/\/$/, "")}/?room=${code}`;
+    : `${base}/?room=${encodeURIComponent(code)}`;
   const share =
     `https://t.me/share/url?url=${encodeURIComponent(invite)}` +
-    `&text=${encodeURIComponent("Присоединяйся к комнате D&D!")}`;
+    `&text=${encodeURIComponent(`Присоединяйся к комнате D&D! Код: ${code}`)}`;
 
-  if (app?.openTelegramLink) {
+  // Prefer native share picker inside Telegram clients.
+  if (typeof app?.openTelegramLink === "function") {
     app.openTelegramLink(share);
     return;
   }
-  window.open(share, "_blank");
+  if (typeof app?.openLink === "function") {
+    app.openLink(share, { try_instant_view: false });
+    return;
+  }
+  window.location.href = share;
 }

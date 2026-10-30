@@ -5,6 +5,7 @@
 
 [functions]
   node_bundler = "esbuild"
+  included_files = ["node_modules/@netlify/blobs/**"]
 
 [[redirects]]
   from = "/api/*"

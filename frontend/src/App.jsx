@@ -3,6 +3,7 @@ import { api } from "./api.js";
 import { getStartParam, initMiniApp } from "./telegram.js";
 import Home from "./components/Home.jsx";
 import RoomLobby from "./components/RoomLobby.jsx";
+import GameSession from "./components/GameSession.jsx";
 
 function roomFromUrl() {
   const params = new URLSearchParams(window.location.search);
@@ -36,10 +37,10 @@ export default function App() {
         const config = await api.config();
         if (!cancelled) {
           setBotUsername(config.botUsername || "");
-          setWebappUrl(config.webappUrl || "");
+          setWebappUrl(config.webappUrl || window.location.origin);
         }
       } catch {
-        /* config optional at boot */
+        if (!cancelled) setWebappUrl(window.location.origin);
       }
 
       const code = roomFromUrl();
@@ -62,6 +63,25 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!room?.code) return undefined;
+
+    let cancelled = false;
+    const timer = setInterval(async () => {
+      try {
+        const data = await api.getRoom(room.code);
+        if (!cancelled) setRoom(data.room);
+      } catch {
+        /* keep last known room while polling */
+      }
+    }, 2000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [room?.code]);
+
   async function run(fn) {
     setBusy(true);
     setError("");
@@ -74,16 +94,32 @@ export default function App() {
     }
   }
 
+  const inGame = room?.status === "playing";
+
   return (
     <main className="page">
       {error ? <p className="error">{error}</p> : null}
 
-      {room ? (
+      {room && inGame ? (
+        <GameSession
+          room={room}
+          user={app.user}
+          busy={busy}
+          onRefresh={() =>
+            run(async () => {
+              const data = await api.getRoom(room.code);
+              setRoom(data.room);
+            })
+          }
+        />
+      ) : null}
+
+      {room && !inGame ? (
         <RoomLobby
           room={room}
           user={app.user}
           botUsername={botUsername}
-          webappUrl={webappUrl}
+          webappUrl={webappUrl || window.location.origin}
           busy={busy}
           onLeave={() => {
             setRoom(null);
@@ -97,8 +133,16 @@ export default function App() {
               setRoom(data.room);
             })
           }
+          onStart={() =>
+            run(async () => {
+              const data = await api.startRoom(room.code);
+              setRoom(data.room);
+            })
+          }
         />
-      ) : (
+      ) : null}
+
+      {!room ? (
         <Home
           user={app.user}
           busy={busy}
@@ -115,7 +159,7 @@ export default function App() {
             })
           }
         />
-      )}
+      ) : null}
 
       {!app.ready ? (
         <p className="muted">Открой из Telegram для полного initData.</p>

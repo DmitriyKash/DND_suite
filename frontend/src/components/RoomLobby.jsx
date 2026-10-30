@@ -8,9 +8,10 @@ export default function RoomLobby({
   busy,
   onLeave,
   onRefresh,
+  onStart,
 }) {
-  const isMaster = room.master.id === user?.id;
-  const canInvite = Boolean(botUsername || webappUrl);
+  const isMaster = Number(room.master.id) === Number(user?.id);
+  const playersCount = room.players.length;
 
   return (
     <>
@@ -19,16 +20,16 @@ export default function RoomLobby({
         <h1>{room.title}</h1>
         <p className="lead">
           {isMaster
-            ? "Вы мастер комнаты. Пригласите игроков из контактов Telegram."
+            ? "Вы мастер комнаты. Когда все готовы — нажмите «Начать игру»."
             : `Мастер: ${room.master.first_name}${
                 room.master.username ? ` (@${room.master.username})` : ""
-              }`}
+              }. Ожидайте старта.`}
         </p>
       </header>
 
       <section className="card">
         <div className="row-between">
-          <h2>Игроки ({room.players.length}/8)</h2>
+          <h2>Игроки ({playersCount}/8)</h2>
           <button className="ghost small" disabled={busy} onClick={onRefresh}>
             Обновить
           </button>
@@ -51,22 +52,53 @@ export default function RoomLobby({
       <section className="card">
         <h2>Приглашение</h2>
         <p className="muted">
-          Откроется Telegram: выберите контакт или чат и отправьте ссылку на комнату.
+          Код комнаты: <strong>{room.code}</strong>. Можно отправить контактy в Telegram.
         </p>
         <div className="row">
           <button
-            disabled={!canInvite}
+            className="ghost"
             onClick={() =>
               inviteFromContacts({ botUsername, webappUrl, code: room.code })
             }
           >
             Пригласить из контактов
           </button>
-          <button className="ghost" onClick={onLeave}>
-            На главную
+          <button
+            className="ghost"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(room.code);
+              } catch {
+                /* ignore */
+              }
+            }}
+          >
+            Копировать код
           </button>
         </div>
       </section>
+
+      {isMaster ? (
+        <section className="card">
+          <h2>Старт</h2>
+          <p className="muted">Игра сразу откроется у всех, кто сейчас в комнате.</p>
+          <div className="row">
+            <button disabled={busy} onClick={onStart}>
+              {busy ? "Запуск..." : "Начать игру"}
+            </button>
+            <button className="ghost" onClick={onLeave}>
+              На главную
+            </button>
+          </div>
+        </section>
+      ) : (
+        <section className="card">
+          <p className="muted">Ждём, пока мастер нажмёт «Начать игру»…</p>
+          <button className="ghost" onClick={onLeave}>
+            На главную
+          </button>
+        </section>
+      )}
     </>
   );
 }

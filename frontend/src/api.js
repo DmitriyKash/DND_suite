@@ -28,5 +28,13 @@ export const api = {
   createRoom: (title) =>
     request("/rooms", { method: "POST", body: JSON.stringify({ title }) }),
   joinRoom: (code) =>
-    request(`/rooms/${encodeURIComponent(code)}/join`, { method: "POST", body: "{}" }),
+    request(`/rooms/${encodeURIComponent(code)}/join`, {
+      method: "POST",
+      body: "{}",
+    }),
+  startRoom: (code) =>
+    request(`/rooms/${encodeURIComponent(code)}/start`, {
+      method: "POST",
+      body: "{}",
+    }),
 };
