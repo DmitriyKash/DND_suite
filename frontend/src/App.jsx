@@ -133,6 +133,12 @@ export default function App() {
               setRoom(data.room);
             })
           }
+          onRollInitiative={() =>
+            run(async () => {
+              const data = await api.rollInitiative(room.code);
+              setRoom(data.room);
+            })
+          }
         />
       ) : null}
 

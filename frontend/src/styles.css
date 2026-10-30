@@ -161,6 +161,39 @@ textarea {
   color: var(--tg-theme-hint-color, #9aa3b5);
 }
 
+.turn-order {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.turn-order li {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #141820;
+}
+
+.turn-order li.current {
+  outline: 2px solid var(--tg-theme-button-color, #5b7cfa);
+}
+
+.turn-pos {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #2a3140;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 button {
   background: var(--tg-theme-button-color, #5b7cfa);
   color: var(--tg-theme-button-text-color, #fff);

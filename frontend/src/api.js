@@ -47,4 +47,9 @@ export const api = {
       method: "POST",
       body: "{}",
     }),
+  rollInitiative: (code) =>
+    request(`/rooms/${encodeURIComponent(code)}/initiative`, {
+      method: "POST",
+      body: "{}",
+    }),
 };

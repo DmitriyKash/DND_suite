@@ -128,6 +128,62 @@ export async function handler(event) {
 
       room.status = "adventure";
       room.adventure_started_at = new Date().toISOString();
+      room.initiative = { status: "rolling" };
+      room.turn_order = [];
+      for (const player of room.players) {
+        if (player.role === "player") {
+          player.initiative = null;
+        }
+      }
+      await store.set(code, room);
+      return json(200, { room });
+    }
+
+    if (event.httpMethod === "POST" && parts[0] === "rooms" && parts[1] && parts[2] === "initiative") {
+      const code = parts[1].toUpperCase();
+      const room = await store.get(code);
+      if (!room) return json(404, { detail: "Комната не найдена" });
+      if (room.status !== "adventure") {
+        return json(400, { detail: "Инициатива доступна после старта приключения" });
+      }
+
+      const player = room.players.find((p) => Number(p.id) === Number(me.id));
+      if (!player || player.role !== "player" || !player.hero) {
+        return json(403, { detail: "Только игроки с героем бросают инициативу" });
+      }
+      if (player.initiative) {
+        return json(400, { detail: "Вы уже бросили инициативу" });
+      }
+
+      const dex = Number(player.hero.stats?.dex || 10);
+      const mod = Math.floor((dex - 10) / 2);
+      const d20 = 1 + Math.floor(Math.random() * 20);
+      const total = d20 + mod;
+      player.initiative = {
+        d20,
+        mod,
+        total,
+        expr: mod >= 0 ? `1d20+${mod}` : `1d20${mod}`,
+        rolled_at: new Date().toISOString(),
+      };
+
+      const party = room.players.filter((p) => p.role === "player" && p.hero);
+      const rolled = party.filter((p) => p.initiative);
+      room.turn_order = [...rolled]
+        .sort((a, b) => {
+          if (b.initiative.total !== a.initiative.total) {
+            return b.initiative.total - a.initiative.total;
+          }
+          if (b.initiative.d20 !== a.initiative.d20) {
+            return b.initiative.d20 - a.initiative.d20;
+          }
+          return String(a.hero.name).localeCompare(String(b.hero.name), "ru");
+        })
+        .map((p) => p.id);
+
+      room.initiative = {
+        status: rolled.length === party.length ? "ready" : "rolling",
+      };
       await store.set(code, room);
       return json(200, { room });
     }

@@ -1,9 +1,75 @@
-export default function GameSession({ room, user, busy, onRefresh, onBegin }) {
+function buildTurnQueue(room) {
+  const byId = new Map(room.players.map((p) => [Number(p.id), p]));
+  const orderedIds = Array.isArray(room.turn_order) ? room.turn_order : [];
+  const queued = orderedIds.map((id) => byId.get(Number(id))).filter(Boolean);
+  const waiting = room.players.filter(
+    (p) => p.role === "player" && p.hero && !p.initiative,
+  );
+  return { queued, waiting };
+}
+
+function TurnOrder({ queued, waiting, highlightId }) {
+  return (
+    <section className="card">
+      <h2>Очередь хода</h2>
+      {queued.length ? (
+        <ol className="turn-order">
+          {queued.map((player, index) => (
+            <li
+              key={player.id}
+              className={Number(player.id) === Number(highlightId) ? "current" : ""}
+            >
+              <span className="turn-pos">{index + 1}</span>
+              <div>
+                <strong>{player.hero?.name || player.first_name}</strong>
+                <div className="muted">
+                  {player.initiative.expr} = {player.initiative.total}
+                  {" · "}
+                  d20 {player.initiative.d20}
+                  {player.initiative.mod >= 0 ? "+" : ""}
+                  {player.initiative.mod}
+                </div>
+              </div>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="muted">Пока никто не бросил инициативу.</p>
+      )}
+
+      {waiting.length ? (
+        <>
+          <h2>Ещё не бросили</h2>
+          <ul className="players">
+            {waiting.map((player) => (
+              <li key={player.id}>
+                <strong>{player.hero?.name || player.first_name}</strong>
+                <span className="badge">ждёт</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+    </section>
+  );
+}
+
+export default function GameSession({
+  room,
+  user,
+  busy,
+  onRefresh,
+  onBegin,
+  onRollInitiative,
+}) {
   const isMaster = Number(room.master.id) === Number(user?.id);
   const heroes = room.players.filter((p) => p.role === "player" && p.hero);
-  const waiting = room.players.filter((p) => p.role === "player" && !p.hero);
-  const allReady = waiting.length === 0 && heroes.length > 0;
+  const waitingHeroes = room.players.filter((p) => p.role === "player" && !p.hero);
+  const allReady = waitingHeroes.length === 0 && heroes.length > 0;
   const inAdventure = room.status === "adventure";
+  const me = room.players.find((p) => Number(p.id) === Number(user?.id));
+  const { queued, waiting } = buildTurnQueue(room);
+  const initiativeReady = room.initiative?.status === "ready";
 
   if (inAdventure) {
     return (
@@ -13,10 +79,44 @@ export default function GameSession({ room, user, busy, onRefresh, onBegin }) {
           <h1>{room.title}</h1>
           <p className="lead">
             {isMaster
-              ? "Сессия началась. Ведите историю для партии."
-              : "Мастер начал приключение. Следите за сценой."}
+              ? initiativeReady
+                ? "Инициатива собрана. Порядок хода зафиксирован."
+                : "Игроки бросают кубик на очередь хода."
+              : me?.initiative
+                ? "Ваш бросок принят. Ждите остальных."
+                : "Бросьте d20 на инициативу (с модификатором Ловкости)."}
           </p>
         </header>
+
+        {!isMaster && me?.hero && !me.initiative ? (
+          <section className="card">
+            <h2>Инициатива</h2>
+            <p className="muted">
+              Бросок на сервере: 1d20 + модификатор Ловкости (
+              {Math.floor(((me.hero.stats?.dex || 10) - 10) / 2) >= 0 ? "+" : ""}
+              {Math.floor(((me.hero.stats?.dex || 10) - 10) / 2)}).
+            </p>
+            <button disabled={busy} onClick={onRollInitiative}>
+              {busy ? "Бросок..." : "Бросить кубик"}
+            </button>
+          </section>
+        ) : null}
+
+        {!isMaster && me?.initiative ? (
+          <section className="card">
+            <h2>Ваш результат</h2>
+            <p>
+              <strong>
+                {me.initiative.expr} = {me.initiative.total}
+              </strong>
+            </p>
+            <p className="muted">
+              d20: {me.initiative.d20}, мод: {me.initiative.mod}
+            </p>
+          </section>
+        ) : null}
+
+        <TurnOrder queued={queued} waiting={waiting} highlightId={queued[0]?.id} />
 
         <section className="card">
           <div className="row-between">
@@ -37,16 +137,12 @@ export default function GameSession({ room, user, busy, onRefresh, onBegin }) {
                   <strong>{player.hero.name}</strong>
                   <div className="muted">
                     {player.hero.profession} · {player.first_name}
+                    {player.initiative ? ` · иниц. ${player.initiative.total}` : ""}
                   </div>
                 </div>
               </li>
             ))}
           </ul>
-        </section>
-
-        <section className="card">
-          <h2>Сцена</h2>
-          <p className="muted">Приключение запущено. Дальше добавим ходы, проверки и бой.</p>
         </section>
       </>
     );
@@ -105,11 +201,11 @@ export default function GameSession({ room, user, busy, onRefresh, onBegin }) {
         )}
       </section>
 
-      {isMaster && waiting.length ? (
+      {isMaster && waitingHeroes.length ? (
         <section className="card">
           <h2>Ещё создают</h2>
           <ul className="players">
-            {waiting.map((player) => (
+            {waitingHeroes.map((player) => (
               <li key={player.id}>
                 <strong>{player.first_name}</strong>
                 <span className="badge">ждёт</span>
@@ -122,7 +218,9 @@ export default function GameSession({ room, user, busy, onRefresh, onBegin }) {
       {isMaster && allReady ? (
         <section className="card">
           <h2>Готово к старту</h2>
-          <p className="muted">Все игроки создали героев. Запустите приключение для всей партии.</p>
+          <p className="muted">
+            Все игроки создали героев. После старта они бросят кубик на очередь хода.
+          </p>
           <button disabled={busy} onClick={onBegin}>
             {busy ? "Запуск..." : "Старт"}
           </button>
