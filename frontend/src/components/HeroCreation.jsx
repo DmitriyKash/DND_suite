@@ -50,6 +50,7 @@ async function compressImage(file) {
 
 export default function HeroCreation({ busy, onSubmit }) {
   const [name, setName] = useState("");
+  const [gender, setGender] = useState("M");
   const [profession, setProfession] = useState(PROFESSIONS[0]);
   const [story, setStory] = useState("");
   const [stats, setStats] = useState(DEFAULT_STATS);
@@ -105,6 +106,7 @@ export default function HeroCreation({ busy, onSubmit }) {
     setLocalError("");
     onSubmit({
       name: name.trim(),
+      gender,
       profession,
       story: story.trim(),
       stats,
@@ -130,6 +132,31 @@ export default function HeroCreation({ busy, onSubmit }) {
           Имя
           <input value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
         </label>
+        <div>
+          <span className="field-label">Пол</span>
+          <div className="row gender-row">
+            <label className={`gender-option ${gender === "M" ? "active" : ""}`}>
+              <input
+                type="radio"
+                name="gender"
+                value="M"
+                checked={gender === "M"}
+                onChange={() => setGender("M")}
+              />
+              М
+            </label>
+            <label className={`gender-option ${gender === "F" ? "active" : ""}`}>
+              <input
+                type="radio"
+                name="gender"
+                value="F"
+                checked={gender === "F"}
+                onChange={() => setGender("F")}
+              />
+              Ж
+            </label>
+          </div>
+        </div>
         <label>
           Профессия
           <select value={profession} onChange={(e) => setProfession(e.target.value)}>

@@ -194,6 +194,35 @@ textarea {
   font-weight: 700;
 }
 
+.field-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.gender-row {
+  gap: 8px;
+}
+
+.gender-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #3a4254;
+  background: #0f1218;
+  cursor: pointer;
+}
+
+.gender-option.active {
+  outline: 2px solid var(--tg-theme-button-color, #5b7cfa);
+}
+
+.gender-option input {
+  accent-color: var(--tg-theme-button-color, #5b7cfa);
+}
+
 button {
   background: var(--tg-theme-button-color, #5b7cfa);
   color: var(--tg-theme-button-text-color, #fff);

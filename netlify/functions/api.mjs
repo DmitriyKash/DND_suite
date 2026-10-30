@@ -241,6 +241,7 @@ export async function handler(event) {
       const body = event.body ? JSON.parse(event.body) : {};
       const heroIn = body.hero || {};
       const name = String(heroIn.name || "").trim().slice(0, 40);
+      const gender = String(heroIn.gender || "").trim().toUpperCase();
       const profession = String(heroIn.profession || "").trim().slice(0, 40);
       const story = String(heroIn.story || "").trim().slice(0, 500);
       const statsIn = heroIn.stats || {};
@@ -263,11 +264,15 @@ export async function handler(event) {
       }
 
       if (name.length < 2) return json(400, { detail: "Укажите имя героя" });
+      if (gender !== "M" && gender !== "F") {
+        return json(400, { detail: "Укажите пол: М или Ж" });
+      }
       if (profession.length < 2) return json(400, { detail: "Укажите профессию" });
       if (story.length < 10) return json(400, { detail: "Слишком короткая история" });
 
       player.hero = {
         name,
+        gender,
         profession,
         story,
         stats,

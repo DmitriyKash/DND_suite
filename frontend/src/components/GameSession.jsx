@@ -155,7 +155,8 @@ export default function GameSession({
                 <div>
                   <strong>{player.hero.name}</strong>
                   <div className="muted">
-                    {player.hero.profession} · {player.first_name}
+                    {player.hero.gender === "F" ? "Ж" : "М"} · {player.hero.profession} ·{" "}
+                    {player.first_name}
                     {player.initiative ? ` · иниц. ${player.initiative.total}` : ""}
                   </div>
                 </div>
@@ -201,7 +202,8 @@ export default function GameSession({
                 <div>
                   <strong>{player.hero.name}</strong>
                   <div className="muted">
-                    {player.hero.profession} · {player.first_name}
+                    {player.hero.gender === "F" ? "Ж" : "М"} · {player.hero.profession} ·{" "}
+                    {player.first_name}
                   </div>
                   <p className="story">{player.hero.story}</p>
                   <div className="stats-mini">
