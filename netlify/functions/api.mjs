@@ -23,7 +23,6 @@ export async function handler(event) {
 
   try {
     const parts = pathParts(event);
-    const store = await getRoomStore();
 
     if (event.httpMethod === "GET" && parts[0] === "config") {
       return json(200, {
@@ -32,6 +31,7 @@ export async function handler(event) {
       });
     }
 
+    const store = await getRoomStore();
     const user = getUser(event);
     const me = publicUser(user);
 

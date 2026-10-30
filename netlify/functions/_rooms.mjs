@@ -1,58 +1,40 @@
-import { getStore } from "@netlify/blobs";
+const globalKey = "__dnd_rooms_store__";
 
-const memory = new Map();
+function memoryBucket() {
+  if (!globalThis[globalKey]) {
+    globalThis[globalKey] = {
+      rooms: new Map(),
+      byUser: new Map(),
+    };
+  }
+  return globalThis[globalKey];
+}
 
-function useMemory() {
-  return process.env.NETLIFY_BLOBS_CONTEXT == null && !process.env.NETLIFY;
+function indexUser(bucket, userId, code) {
+  const key = String(userId);
+  const list = bucket.byUser.get(key) || [];
+  if (!list.includes(code)) {
+    bucket.byUser.set(key, [...list, code]);
+  }
 }
 
 export async function getRoomStore() {
-  if (useMemory()) {
-    return {
-      async get(code) {
-        return memory.get(code) || null;
-      },
-      async set(code, room) {
-        memory.set(code, room);
-      },
-      async listUserRooms(userId) {
-        return [...memory.values()].filter(
-          (room) =>
-            room.master.id === userId ||
-            room.players.some((p) => p.id === userId),
-        );
-      },
-    };
-  }
-
-  const store = getStore("dnd-rooms");
+  const bucket = memoryBucket();
   return {
     async get(code) {
-      return (await store.get(code, { type: "json" })) || null;
+      return bucket.rooms.get(String(code).toUpperCase()) || null;
     },
     async set(code, room) {
-      await store.setJSON(code, room);
-      const indexKey = `user:${room.master.id}`;
-      const existing = (await store.get(indexKey, { type: "json" })) || [];
-      if (!existing.includes(code)) {
-        await store.setJSON(indexKey, [...existing, code]);
-      }
+      const key = String(code).toUpperCase();
+      bucket.rooms.set(key, room);
+      indexUser(bucket, room.master.id, key);
       for (const player of room.players) {
-        const key = `user:${player.id}`;
-        const list = (await store.get(key, { type: "json" })) || [];
-        if (!list.includes(code)) {
-          await store.setJSON(key, [...list, code]);
-        }
+        indexUser(bucket, player.id, key);
       }
     },
     async listUserRooms(userId) {
-      const codes = (await store.get(`user:${userId}`, { type: "json" })) || [];
-      const rooms = [];
-      for (const code of codes) {
-        const room = await store.get(code, { type: "json" });
-        if (room) rooms.push(room);
-      }
-      return rooms;
+      const codes = bucket.byUser.get(String(userId)) || [];
+      return codes.map((code) => bucket.rooms.get(code)).filter(Boolean);
     },
   };
 }

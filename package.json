@@ -4,8 +4,5 @@
   "scripts": {
     "api": "node scripts/dev-api.mjs",
     "dev:web": "npm --prefix frontend run dev"
-  },
-  "dependencies": {
-    "@netlify/blobs": "^9.1.2"
   }
 }
