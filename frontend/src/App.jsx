@@ -4,6 +4,7 @@ import { getStartParam, initMiniApp } from "./telegram.js";
 import Home from "./components/Home.jsx";
 import RoomLobby from "./components/RoomLobby.jsx";
 import GameSession from "./components/GameSession.jsx";
+import HeroCreation from "./components/HeroCreation.jsx";
 
 function roomFromUrl() {
   const params = new URLSearchParams(window.location.search);
@@ -95,12 +96,27 @@ export default function App() {
   }
 
   const inGame = room?.status === "playing";
+  const me = room?.players?.find((p) => Number(p.id) === Number(app.user?.id));
+  const isMaster = Number(room?.master?.id) === Number(app.user?.id);
+  const needsHero = inGame && !isMaster && me && !me.hero;
 
   return (
     <main className="page">
       {error ? <p className="error">{error}</p> : null}
 
-      {room && inGame ? (
+      {needsHero ? (
+        <HeroCreation
+          busy={busy}
+          onSubmit={(hero) =>
+            run(async () => {
+              const data = await api.saveHero(room.code, hero);
+              setRoom(data.room);
+            })
+          }
+        />
+      ) : null}
+
+      {room && inGame && !needsHero ? (
         <GameSession
           room={room}
           user={app.user}

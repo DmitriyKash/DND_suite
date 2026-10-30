@@ -106,6 +106,60 @@ export async function handler(event) {
       return json(200, { room });
     }
 
+    if (event.httpMethod === "POST" && parts[0] === "rooms" && parts[1] && parts[2] === "hero") {
+      const code = parts[1].toUpperCase();
+      const room = await store.get(code);
+      if (!room) return json(404, { detail: "Комната не найдена" });
+      if (room.status !== "playing") {
+        return json(400, { detail: "Сначала мастер должен начать игру" });
+      }
+
+      const player = room.players.find((p) => Number(p.id) === Number(me.id));
+      if (!player) return json(403, { detail: "Вы не в этой комнате" });
+      if (player.role === "master") {
+        return json(400, { detail: "Мастер не создаёт игрового героя" });
+      }
+
+      const body = event.body ? JSON.parse(event.body) : {};
+      const heroIn = body.hero || {};
+      const name = String(heroIn.name || "").trim().slice(0, 40);
+      const profession = String(heroIn.profession || "").trim().slice(0, 40);
+      const story = String(heroIn.story || "").trim().slice(0, 500);
+      const statsIn = heroIn.stats || {};
+      const keys = ["str", "dex", "con", "int", "wis", "cha"];
+      const stats = {};
+      for (const key of keys) {
+        const value = Number(statsIn[key]);
+        if (!Number.isFinite(value) || value < 8 || value > 15) {
+          return json(400, { detail: `Некорректная характеристика ${key}` });
+        }
+        stats[key] = Math.round(value);
+      }
+
+      let image = null;
+      if (typeof heroIn.image === "string" && heroIn.image.startsWith("data:image/")) {
+        if (heroIn.image.length > 400_000) {
+          return json(400, { detail: "Изображение слишком большое" });
+        }
+        image = heroIn.image;
+      }
+
+      if (name.length < 2) return json(400, { detail: "Укажите имя героя" });
+      if (profession.length < 2) return json(400, { detail: "Укажите профессию" });
+      if (story.length < 10) return json(400, { detail: "Слишком короткая история" });
+
+      player.hero = {
+        name,
+        profession,
+        story,
+        stats,
+        image,
+        created_at: new Date().toISOString(),
+      };
+      await store.set(code, room);
+      return json(200, { room });
+    }
+
     return json(404, { detail: "Not found" });
   } catch (err) {
     return json(err.status || 500, { detail: err.message || "Server error" });

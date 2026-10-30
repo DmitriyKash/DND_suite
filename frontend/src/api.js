@@ -37,4 +37,9 @@ export const api = {
       method: "POST",
       body: "{}",
     }),
+  saveHero: (code, hero) =>
+    request(`/rooms/${encodeURIComponent(code)}/hero`, {
+      method: "POST",
+      body: JSON.stringify({ hero }),
+    }),
 };
